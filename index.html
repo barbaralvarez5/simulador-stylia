@@ -1,1 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STYLIA | Analytics Ultimate Master Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --ga-blue: #1a73e8; --ga-yellow: #f9ab00; --ga-green: #1e8e3e; --ga-border: #dadce0; }
+        body { font-family: 'Google Sans', Roboto, sans-serif; background-color: #f8f9fa; overflow-x: hidden; }
+        .ga-card { background: white; border: 1px solid var(--ga-border); border-radius: 8px; height: 100%; display: flex; flex-direction: column; position: relative; }
+        .sidebar-item { cursor: pointer; border-radius: 0 24px 24px 0; transition: 0.2s; margin-right: 8px; color: #3c4043; font-size: 14px; }
+        .sidebar-item:hover { background-color: #f1f3f4; }
+        .sidebar-active { background-color: #e8f0fe; color: var(--ga-blue); font-weight: 500; border-radius: 0 24px 24px 0; }
+        .kpi-card { cursor: pointer; border-bottom: 2px solid transparent; opacity: 0.5; transition: 0.3s; padding-bottom: 4px; }
+        .kpi-card.active-users { border-color: var(--ga-blue); opacity: 1; }
+        .kpi-card.active-events { border-color: var(--ga-yellow); opacity: 1; }
+        .kpi-card.active-purchases { border-color: var(--ga-green); opacity: 1; }
+        .kpi-value { font-size: 28px; color: #202124; font-weight: 400; }
+        #map, #map-rt { height: 260px; width: 100%; border-radius: 4px; }
+        #map-rt { height: 450px; }
+        .flag-img { width: 18px; height: 12px; border: 1px solid #ddd; display: inline-block; margin-right: 6px; }
+        #reports-slider { transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); display: flex; width: 300%; }
+        .slide { width: 33.333%; padding: 0 4px; }
+        .kpi-box { border-right: 1px solid #eee; padding: 0 24px; flex: 1; }
+        .kpi-box:last-child { border-right: none; }
+        .sub-menu-link { padding: 6px 24px 6px 48px; font-size: 13px; color: #3c4043; cursor: pointer; border-radius: 0 24px 24px 0; margin-right: 8px; display: block; }
+        .sub-menu-link:hover { background-color: #f1f3f4; }
+        .sub-menu-active { background-color: #e8f0fe; color: var(--ga-blue); font-weight: 500; }
+        .tr-row:hover { background-color: #f1f3f4 !important; }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
 
+    <header class="bg-white border-b border-gray-200 h-14 flex items-center px-4 justify-between z-[1001]">
+        <div class="flex items-center gap-4">
+            <i class="fa-solid fa-bars text-gray-500 cursor-pointer"></i>
+            <img src="https://www.gstatic.com/analytics-suite/header/suite/v2/ic_analytics.svg" class="w-6">
+            <span class="text-gray-600 text-lg">Analytics</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="text-right mr-2 font-bold text-xs uppercase text-gray-400">STYLIA Official</div>
+            <div class="w-8 h-8 rounded-full bg-[#C5A059] flex items-center justify-center text-white font-bold text-xs">S</div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <aside class="w-64 bg-white border-r border-gray-200 py-4 pr-3 overflow-y-auto">
+            <div id="nav-home" onclick="showPage('home')" class="sidebar-active sidebar-item flex items-center gap-4 py-2.5 px-6 mb-1 cursor-pointer">
+                <i class="fa-solid fa-house"></i> <span>Página principal</span>
+            </div>
+            <div id="nav-reports" onclick="showPage('reports')" class="sidebar-item flex items-center gap-4 py-2.5 px-6 mb-1 cursor-pointer">
+                <i class="fa-solid fa-chart-column"></i> <span>Informes</span>
+            </div>
+            <div id="nav-rt-res" onclick="showPage('rt')" class="sub-menu-link">Resumen en tiempo real</div>
+            <div id="nav-rt-pag" onclick="showPage('rt-pages')" class="sub-menu-link">Páginas en tiempo real</div>
+            
+            <div class="border-t my-2"></div>
+            <div class="px-6 py-2 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Life cycle</div>
+            <div id="nav-acq" onclick="showPage('acq')" class="sub-menu-link">Adquisición</div>
+            <div id="nav-int" onclick="showPage('int')" class="sub-menu-link">Interacción</div>
+            <div id="nav-mon" onclick="showPage('mon')" class="sub-menu-link">Monetización</div>
+
+            <div onclick="showPage('rt')" class="sidebar-item flex items-center gap-4 py-2.5 px-6 mt-4 cursor-pointer">
+                <i class="fa-solid fa-clock"></i> <span>Tiempo real</span>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-6" id="main-scroll">
+            
+            <div id="view-home">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-normal text-gray-800">Página principal</h1>
+                    <select id="dateRangeHome" onchange="updateGlobalData(this.value)" class="bg-white border px-4 py-1.5 rounded-full text-sm outline-none font-medium">
+                        <option value="7">Últimos 7 días</option>
+                        <option value="30">Últimos 30 días</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-12 gap-4 mb-6">
+                    <div class="col-span-12 ga-card p-5">
+                        <div class="flex gap-10 mb-6" id="kpi-container-home">
+                            <div class="kpi-card active-users" onclick="switchMetric('users', this)"><div class="text-xs font-medium text-gray-500 mb-1 uppercase">Usuarios activos</div><div class="kpi-value" id="vh-users">1.2k</div></div>
+                            <div class="kpi-card" onclick="switchMetric('events', this)"><div class="text-xs font-medium text-gray-500 mb-1 uppercase">Eventos</div><div class="kpi-value" id="vh-events">8.4k</div></div>
+                            <div class="kpi-card" onclick="switchMetric('purchases', this)"><div class="text-xs font-medium text-gray-500 mb-1 uppercase">Compras</div><div class="kpi-value" id="vh-purchases">42</div></div>
+                        </div>
+                        <div class="h-64"><canvas id="mainChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-12 gap-4 mb-6">
+                    <div class="col-span-8 ga-card p-5"><div class="text-sm font-medium mb-4">Usuarios por país (Top 12)</div><div id="map"></div></div>
+                    <div class="col-span-4 ga-card p-5"><div class="text-[10px] font-bold text-gray-400 uppercase mb-2">En tiempo real</div><div class="text-4xl mb-4" id="home-rt-count">55</div><div id="home-rt-list" class="space-y-2 text-sm"></div></div>
+                </div>
+                
+                <div class="relative group mb-10">
+                    <div onclick="moveSlide(1)" class="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border rounded-full flex items-center justify-center shadow cursor-pointer z-10 hover:bg-gray-50"><i class="fa-solid fa-chevron-right text-blue-600"></i></div>
+                    <div onclick="moveSlide(-1)" class="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white border rounded-full flex items-center justify-center shadow cursor-pointer z-10 hover:bg-gray-50"><i class="fa-solid fa-chevron-left text-blue-600"></i></div>
+                    <div class="overflow-hidden"><div id="reports-slider">
+                        <div class="slide grid grid-cols-2 gap-4">
+                            <div class="ga-card p-4"><div class="text-xs font-bold uppercase mb-4 text-gray-400">Canales</div><canvas id="chanChart" height="180"></canvas></div>
+                            <div class="ga-card p-4"><div class="text-xs font-bold uppercase mb-4 text-gray-400">Vistas</div><div id="mini-vistas" class="text-sm space-y-2"></div></div>
+                        </div>
+                        <div class="slide grid grid-cols-2 gap-4">
+                            <div class="ga-card p-4 font-bold text-green-700 uppercase">Artículos Comprados: Negro (18)</div>
+                            <div class="ga-card p-4 text-xs space-y-2"><b>Número de eventos:</b> 12.8k<br>view_item: 2.4k</div>
+                        </div>
+                        <div class="slide grid grid-cols-2 gap-4">
+                            <div class="ga-card p-4 bg-blue-50 border-blue-200">Sugerencia IA: El Armario Blanco crece un 15% los fines de semana.</div>
+                            <div class="ga-card p-4"><div class="text-xs font-bold uppercase mb-2">Usuarios nuevos</div><canvas id="newUsersChartHome" height="150"></canvas></div>
+                        </div>
+                    </div></div>
+                </div>
+            </div>
+
+            <div id="view-reports" class="hidden">
+                <h1 class="text-2xl font-normal mb-6">Informe panorámico</h1>
+                <div class="ga-card mb-8 p-6"><table class="w-full text-left text-sm"><thead class="text-[10px] border-b uppercase font-bold text-gray-400"><tr><th>Página</th><th>Vistas</th><th class="text-right">Usuarios</th></tr></thead><tbody id="rep-table-body"></tbody></table></div>
+                <div class="grid grid-cols-4 gap-4" id="rep-cards-rich">
+                    <div class="ga-card p-4"><div class="text-[10px] uppercase font-bold text-gray-400 mb-4">Fuentes</div><div id="rep-sources" class="space-y-2 text-xs"></div></div>
+                    <div class="ga-card p-4"><div class="text-[10px] uppercase font-bold text-gray-400 mb-4">Nuevos vs Recur</div><canvas id="repNewRecChart" height="150"></canvas></div>
+                    <div class="ga-card p-4 flex flex-col items-center"><div class="text-[10px] uppercase font-bold text-gray-400 mb-4 w-full">Plataforma</div><canvas id="repPlatChart" height="100"></canvas><div class="mt-2 font-bold uppercase">Web <span class="text-gray-400 text-xs">100%</span></div></div>
+                    <div class="ga-card p-4"><div class="text-[10px] uppercase font-bold text-gray-400 mb-4">Ciudades</div><div id="rep-cities" class="space-y-2 text-xs"></div></div>
+                </div>
+            </div>
+
+            <div id="view-rt" class="hidden">
+                <h1 class="text-2xl font-normal mb-6">Resumen en tiempo real</h1>
+                <div class="ga-card mb-8 relative border-none bg-gray-50 overflow-hidden">
+                    <div id="map-rt"></div>
+                    <div class="absolute top-6 left-6 z-[1000] ga-card p-6 w-80 shadow-2xl">
+                        <div class="text-xs font-bold text-gray-400 uppercase mb-4">Usuarios activos (30 min)</div>
+                        <div class="text-5xl font-light">70</div>
+                        <div class="h-20 flex items-end gap-1 mt-6" id="rt-bars"></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="ga-card p-4"><div class="text-[10px] font-bold uppercase text-gray-400 mb-4">Fuente</div><div id="rt-src" class="space-y-3 text-[11px]"></div></div>
+                    <div class="ga-card p-4"><div class="text-[10px] font-bold uppercase text-gray-400 mb-4">Audiencia</div><div id="rt-aud" class="space-y-3 text-[11px]"></div></div>
+                    <div class="ga-card p-4"><div class="text-[10px] font-bold uppercase text-gray-400 mb-4">Página</div><div id="rt-pag" class="space-y-3 text-[11px]"></div></div>
+                    <div class="ga-card p-4"><div class="text-[10px] font-bold uppercase text-gray-400 mb-4">Evento</div><div id="rt-eve" class="space-y-3 text-[11px]"></div></div>
+                </div>
+            </div>
+
+            <div id="view-rt-pages" class="hidden">
+                <h1 class="text-2xl font-normal mb-6">Páginas en tiempo real</h1>
+                <div class="ga-card"><table class="w-full text-left text-sm"><tbody id="rt-pages-table"></tbody></table></div>
+            </div>
+
+            <div id="view-acq" class="hidden">
+                <h1 class="text-2xl font-normal mb-6">Adquisición</h1>
+                <div class="grid grid-cols-12 gap-4 mb-6">
+                    <div class="col-span-8 ga-card p-5"><div class="h-64"><canvas id="acqMainChart"></canvas></div></div>
+                    <div class="col-span-4 ga-card p-5"><div class="text-xs font-bold uppercase text-gray-400 mb-2">Activos en 30 min</div><div class="text-5xl font-light mb-4">55</div><div class="h-24 flex items-end gap-1" id="acq-rt-bars"></div></div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="ga-card p-5"><div class="text-[10px] uppercase font-bold mb-4">Nuevos por canal</div><div id="acq-chans" class="space-y-3 text-xs"></div></div>
+                    <div class="ga-card p-5"><div class="text-[10px] uppercase font-bold mb-4">Sesiones por canal</div><div id="acq-sess" class="space-y-3 text-xs"></div></div>
+                    <div class="ga-card p-5"><div class="text-[10px] uppercase font-bold mb-4">LTV (120 días)</div><canvas id="acqLtvChart" height="150"></canvas></div>
+                </div>
+            </div>
+
+            <div id="view-int" class="hidden">
+                <h1 class="text-2xl font-normal mb-6">Resumen de interacción</h1>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="ga-card p-5"><div class="text-[10px] uppercase font-bold mb-4">Vistas por Color</div><div id="int-colors" class="space-y-4"></div></div>
+                    <div class="ga-card p-5"><div class="text-[10px] uppercase font-bold mb-4">Principales Eventos</div><div id="int-events" class="space-y-4 text-xs"></div></div>
+                </div>
+            </div>
+
+            <div id="view-mon" class="hidden">
+                <h1 class="text-2xl font-normal mb-6">Monetización</h1>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="ga-card p-5">Ingresos: 15.420 €<canvas id="monChart1" height="150"></canvas></div>
+                    <div class="ga-card p-5">Compradores: 82<canvas id="monChart2" height="150"></canvas></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="ga-card p-5"><div id="mon-items-list" class="space-y-3 text-xs"></div></div>
+                    <div class="ga-card p-5"><div id="mon-rev-list" class="space-y-3 text-xs"></div></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let mainChart, acqChart, monChart1, monChart2, ltvChart;
+        let metric = 'users';
+        const raw = { users: [150, 200, 180, 240, 210, 280, 250], events: [1100, 1400, 1200, 1700, 1500, 1900, 1800], purchases: [5, 8, 6, 10, 8, 12, 9] };
+        const config = { users: { color: '#1a73e8', bg: 'rgba(26, 115, 232, 0.1)' }, events: { color: '#f9ab00', bg: 'rgba(249, 171, 0, 0.1)' }, purchases: { color: '#1e8e3e', bg: 'rgba(30, 142, 62, 0.1)' } };
+        const countries = [{n:"España", c:[40,-3], f:"es", u:840}, {n:"México", c:[23,-102], f:"mx", u:620}, {n:"EE.UU.", c:[37,-95], f:"us", u:420}, {n:"Colombia", c:[4,-72], f:"co", u:150}, {n:"Argentina", c:[-38,-63], f:"ar", u:120}, {n:"Chile", c:[-33,-70], f:"cl", u:90}, {n:"R.Unido", c:[55,-3], f:"gb", u:75}, {n:"Alemania", c:[51,10], f:"de", u:60}, {n:"Francia", c:[46,2], f:"fr", u:55}, {n:"Italia", c:[41,12], f:"it", u:50}, {n:"Perú", c:[-9,-75], f:"pe", u:40}, {n:"Portugal", c:[39,-8], f:"pt", u:35}];
+
+        function showPage(p) {
+            ['view-home', 'view-reports', 'view-rt', 'view-rt-pages', 'view-acq', 'view-int', 'view-mon'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.querySelectorAll('.sidebar-item, .sub-menu-link').forEach(n => n.classList.remove('sidebar-active', 'sub-menu-active'));
+            document.getElementById('view-'+p).classList.remove('hidden');
+            if(p === 'home') document.getElementById('nav-home').classList.add('sidebar-active');
+            if(p === 'acq') initAcqCharts();
+            if(p === 'int') renderIntData();
+            if(p === 'mon') initMonCharts();
+            if(p === 'rt') { setTimeout(() => mapRT.invalidateSize(), 200); renderRTData(); }
+            if(p === 'rt-pages') renderRTPagesTable();
+            updateGlobalData(document.getElementById('dateRangeHome').value);
+        }
+
+        function switchMetric(m, el) {
+            metric = m;
+            document.querySelectorAll('#kpi-container-home .kpi-card').forEach(c => c.className = 'kpi-card');
+            el.classList.add('active-' + m);
+            updateGlobalData(document.getElementById('dateRangeHome').value);
+        }
+
+        function updateGlobalData(days) {
+            const f = days / 7;
+            document.getElementById('vh-users').innerText = (1.2 * f).toFixed(1) + "k";
+            document.getElementById('vh-events').innerText = (8.4 * f).toFixed(1) + "k";
+            document.getElementById('vh-purchases').innerText = Math.round(42 * f);
+            mainChart.data.datasets[0].data = raw[metric].map(v => v * f);
+            mainChart.data.datasets[0].borderColor = config[metric].color;
+            mainChart.data.datasets[0].backgroundColor = config[metric].bg;
+            mainChart.update();
+            renderReportsItems(f);
+        }
+
+        function renderReportsItems(f) {
+            const p = [{t:"/armario-negro", v:1400*f, u:840*f}, {t:"/armario-blanco", v:1100*f, u:620*f}, {t:"/home", v:2100*f, u:1500*f}, {t:"/marron", v:800*f, u:420*f}, {t:"/testimonios", v:300*f, u:150*f}, {t:"/sobre-stylia", v:200*f, u:100*f}, {t:"/contacto", v:100*f, u:50*f}, {t:"/blog", v:50*f, u:25*f}];
+            document.getElementById('rep-table-body').innerHTML = p.map(i => `<tr><td class="py-2 text-blue-600">${i.t}</td><td>${Math.round(i.v)}</td><td class="text-right">${Math.round(i.u)}</td></tr>`).join('');
+            document.getElementById('rep-sources').innerHTML = `<div>Direct: <b>${Math.round(850*f)}</b></div><div>Google: <b>${Math.round(320*f)}</b></div>`;
+            document.getElementById('rep-cities').innerHTML = `<div>Madrid: <b>${Math.round(600*f)}</b></div><div>Barcelona: <b>${Math.round(400*f)}</b></div>`;
+        }
+
+        function renderRTData() {
+            const fill = (id, list) => document.getElementById(id).innerHTML = list.map(i => `<div class="flex justify-between border-b pb-1"><span>${i[0]}</span><b>${i[1]}</b></div>`).join('');
+            fill('rt-src', [['direct', 45], ['google', 15]]);
+            fill('rt-aud', [['All Users', 70]]);
+            fill('rt-pag', [['/home', 35], ['/armario-negro', 14]]);
+            fill('rt-eve', [['page_view', 156], ['view_item', 148]]);
+        }
+
+        function renderRTPagesTable() {
+            const r = [{r:"/home", u:35}, {r:"/armario-negro", u:14}, {r:"/armario-blanco", u:11}, {r:"/armario-marron", u:8}, {r:"/testimonios", u:6}, {r:"/sobre-stylia", u:4}, {r:"/contacto", u:2}, {r:"/carrito", u:1}];
+            document.getElementById('rt-pages-table').innerHTML = r.map((p, i) => `<tr class="hover:bg-gray-100 border-b cursor-pointer transition-colors"><td class="p-4 text-gray-400 w-12">${i+1}</td><td class="p-4 text-blue-600 font-medium">${p.r}</td><td class="p-4 text-right font-bold">${p.u}</td></tr>`).join('');
+        }
+
+        function initAcqCharts() {
+            if(!acqChart) {
+                acqChart = new Chart(document.getElementById('acqMainChart'), { type: 'line', data: { labels: ['15 mar','22','29','05 abr'], datasets: [{ data: [40, 30, 35, 78], borderColor: '#1a73e8', tension: 0.4 }] } });
+                ltvChart = new Chart(document.getElementById('acqLtvChart'), { type: 'line', data: { labels: ['D1','D40','D80','D120'], datasets: [{ data: [0.8, 1.8, 2.1, 2.3], borderColor: '#1a73e8', fill: true }] } });
+                document.getElementById('acq-chans').innerHTML = `<div>Direct <b>52 mil</b></div><div>Organic <b>7.9 mil</b></div>`;
+                document.getElementById('acq-sess').innerHTML = `<div>Direct <b>64 mil</b></div><div>Organic <b>14 mil</b></div>`;
+                for(let i=0; i<30; i++) document.getElementById('acq-rt-bars').innerHTML += `<div class="bg-blue-500 w-full" style="height: ${Math.floor(Math.random()*80)+10}%"></div>`;
+            }
+        }
+
+        function renderIntData() {
+            const cat = [['Negro', 350, 80], ['Blanco', 210, 60], ['Marrón', 150, 40]];
+            document.getElementById('int-colors').innerHTML = cat.map(c => `<div><div class="text-xs font-bold text-gray-500">${c[0]}</div><div class="flex items-center gap-4"><div class="flex-1 bg-gray-100 h-2 rounded"><div class="bg-blue-500 h-2 rounded" style="width:${c[2]}%"></div></div><b>${c[1]}</b></div></div>`).join('');
+            document.getElementById('int-events').innerHTML = `<div>page_view: 267k</div><div>view_item: 148k</div>`;
+        }
+
+        function initMonCharts() {
+            if(!monChart1) {
+                monChart1 = new Chart(document.getElementById('monChart1'), { type: 'line', data: { labels: ['15 mar','22','29','05 abr'], datasets: [{ data: [8, 12, 10, 15], borderColor: '#1a73e8', tension: 0.4 }] } });
+                monChart2 = new Chart(document.getElementById('monChart2'), { type: 'line', data: { labels: ['15 mar','22','29','05 abr'], datasets: [{ data: [20, 45, 30, 55], borderColor: '#1a73e8', tension: 0.4 }] } });
+                document.getElementById('mon-items-list').innerHTML = `<div>Armario Negro <b>42</b></div><div>Armario Blanco <b>31</b></div>`;
+                document.getElementById('mon-rev-list').innerHTML = `<div>Negro: <b>8.4k €</b></div><div>Blanco: <b>4.2k €</b></div>`;
+            }
+        }
+
+        let mapHome, mapRT;
+        window.onload = function() {
+            mainChart = new Chart(document.getElementById('mainChart').getContext('2d'), { type: 'line', data: { labels: ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'], datasets: [{ data: raw.users, borderColor: '#1a73e8', backgroundColor: 'rgba(26, 115, 232, 0.1)', fill: true, tension: 0.4 }] }, options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} } });
+            mapHome = L.map('map', { zoomControl: false }).setView([20, 0], 1);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapHome);
+            mapRT = L.map('map-rt', { zoomControl: false }).setView([20, 0], 2);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapRT);
+
+            countries.forEach(l => {
+                const rt = Math.floor(Math.random() * 15) + 2;
+                const popup = `<div style="text-align:center;"><img src="https://flagcdn.com/w40/${l.f}.png" style="width:25px;border:1px solid #eee"><br><b>${rt} activos</b><br><span style="font-size:10px;color:gray;">${l.n}</span></div>`;
+                L.circleMarker(l.c, {radius: 7, color: "#1a73e8", weight: 2, fillOpacity: 0.7}).addTo(mapHome).bindPopup(popup);
+                L.circleMarker(l.c, {radius: 6, color: "#1a73e8", weight: 1, fillOpacity: 0.8}).addTo(mapRT).bindPopup(popup);
+                document.getElementById('home-rt-list').innerHTML += `<div class="flex justify-between"><div><img src="https://flagcdn.com/w20/${l.f}.png" class="flag-img"> ${l.n}</div><b>${rt}</b></div>`;
+            });
+
+            new Chart(document.getElementById('chanChart'), { type: 'bar', data: { labels: ['Search', 'Direct'], datasets: [{ data: [450, 320], backgroundColor: '#1a73e8' }] }, options: { indexAxis: 'y' } });
+            new Chart(document.getElementById('newUsersChartHome'), { type: 'bar', data: { labels: ['Ads', 'Organic'], datasets: [{ data: [120, 80], backgroundColor: '#1a73e8' }] } });
+            document.getElementById('mini-vistas').innerHTML = `<div>/Home: 840</div><div>/Armario Negro: 450</div>`;
+            showPage('home');
+        };
+        function moveSlide(d) { let s = document.getElementById('reports-slider'); let current = parseInt(s.dataset.pos || 0); current = (current + d + 3) % 3; s.style.transform = `translateX(-${current * 33.333}%)`; s.dataset.pos = current; }
+    </script>
+</body>
+</html>
